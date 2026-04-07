@@ -90,14 +90,14 @@ const db=getFirestore(app);
 const PARTICIPANTS=['Fabián','Karen','Yohn','Michael'];
 const PHASES=[{id:'oct',name:'Octavos',date:'4–12 Mar 2026'},{id:'qtr',name:'Cuartos',date:'7–15 Abr 2026'},{id:'semi',name:'Semis',date:'28 Abr – 6 May 2026'},{id:'final',name:'Final',date:'30 May 2026 · Budapest'}];
 const MATCHES=[
-  {id:'o1',phase:'oct',home:'PSG',away:'Newcastle',hi:'psg',ai:'newcastle'},
-  {id:'o2',phase:'oct',home:'Chelsea',away:'Barcelona',hi:'chelsea',ai:'barcelona'},
-  {id:'o3',phase:'oct',home:'Galatasaray',away:'Atl. Madrid',hi:'galatasaray',ai:'atletico'},
-  {id:'o4',phase:'oct',home:'Liverpool',away:'Tottenham',hi:'liverpool',ai:'tottenham'},
-  {id:'o5',phase:'oct',home:'Real Madrid',away:'Bodo/Glimt',hi:'realmadrid',ai:'bodo'},
-  {id:'o6',phase:'oct',home:'Man City',away:'Sporting CP',hi:'mancity',ai:'sporting'},
-  {id:'o7',phase:'oct',home:'Inter',away:'Feyenoord',hi:'inter',ai:'feyenoord'},
-  {id:'o8',phase:'oct',home:'Arsenal',away:'Juventus',hi:'arsenal',ai:'juventus'},
+  {id:'psg-che', phase:'oct', home:'PSG',              away:'Chelsea',        hi:'psg',        ai:'chelsea'},
+  {id:'gal-liv', phase:'oct', home:'Galatasaray',      away:'Liverpool',      hi:'galatasaray',ai:'liverpool'},
+  {id:'rma-mci', phase:'oct', home:'Real Madrid',      away:'Man City',       hi:'realmadrid', ai:'mancity'},
+  {id:'ata-bay', phase:'oct', home:'Atalanta',         away:'Bayern Munich',  hi:'atalanta',   ai:'bayernmunich'},
+  {id:'new-bar', phase:'oct', home:'Newcastle',        away:'Barcelona',      hi:'newcastle',  ai:'barcelona'},
+  {id:'atm-tot', phase:'oct', home:'Atlético Madrid',  away:'Tottenham',      hi:'atletico',   ai:'tottenham'},
+  {id:'bod-spo', phase:'oct', home:'Bodø/Glimt',       away:'Sporting CP',    hi:'bodo',       ai:'sporting'},
+  {id:'lev-ars', phase:'oct', home:'Bayer Leverkusen', away:'Arsenal',        hi:'leverkusen', ai:'arsenal'},
   {id:'q1',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
   {id:'q2',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
   {id:'q3',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
@@ -106,25 +106,7 @@ const MATCHES=[
   {id:'s2',phase:'semi',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
   {id:'f1',phase:'final',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true,oneleg:true}
 ];
-const CRESTS={
-  psg:'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
-  chelsea:'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
-  galatasaray:'https://upload.wikimedia.org/wikipedia/commons/4/44/Galatasaray_Sports_Club_Logo.svg',
-  liverpool:'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
-  realmadrid:'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
-  mancity:'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
-  atalanta:'https://upload.wikimedia.org/wikipedia/commons/2/2f/Logo_Atalanta_Bergamo.svg',
-  bayernmunich:'https://upload.wikimedia.org/wikipedia/commons/b/b1/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg',
-  newcastle:'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg',
-  barcelona:'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
-  atletico:'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
-  tottenham:'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg',
-  bodo:'https://upload.wikimedia.org/wikipedia/commons/7/74/FK_Bod%C3%B8_Glimt_logo.svg',
-  sporting:'https://upload.wikimedia.org/wikipedia/en/f/f1/Sporting_CP_logo.svg',
-  leverkusen:'https://upload.wikimedia.org/wikipedia/en/5/59/Bayer_04_Leverkusen_logo.svg',
-  arsenal:'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
-  ucl:'https://upload.wikimedia.org/wikipedia/en/f/f5/UEFA_Champions_League.svg'
-};
+const CRESTS={psg:'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',chelsea:'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',galatasaray:'https://upload.wikimedia.org/wikipedia/commons/4/44/Galatasaray_Sports_Club_Logo.svg',liverpool:'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',realmadrid:'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',mancity:'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',atalanta:'https://upload.wikimedia.org/wikipedia/commons/4/44/Atalanta_BC_logo.svg',bayernmunich:'https://upload.wikimedia.org/wikipedia/commons/1/1f/FC_Bayern_M%C3%BCnchen_logo_%282002%E2%80%932017%29.svg',newcastle:'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg',barcelona:'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',atletico:'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',tottenham:'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg',bodo:'https://upload.wikimedia.org/wikipedia/commons/7/74/FK_Bod%C3%B8_Glimt_logo.svg',sporting:'https://upload.wikimedia.org/wikipedia/en/f/f1/Sporting_CP_logo.svg',leverkusen:'https://upload.wikimedia.org/wikipedia/en/5/59/Bayer_04_Leverkusen_logo.svg',arsenal:'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',ucl:'https://upload.wikimedia.org/wikipedia/en/f/f5/UEFA_Champions_League.svg'};
 let results={};let pron={};let activePhase='oct';let activeParticipant=PARTICIPANTS[0];
 function initResults(){const r={};MATCHES.forEach(m=>{r[m.id]={ida:{home:null,away:null},vuelta:m.oneleg?null:{home:null,away:null}};});return r;}
 function initPron(){const p={};PARTICIPANTS.forEach(n=>{p[n]={};MATCHES.forEach(m=>{p[n][m.id]={ida:{home:null,away:null},vuelta:{home:null,away:null}};});});return p;}
