@@ -90,23 +90,8 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const PARTICIPANTS=['Fabián','Karen','Yohn','Michael'];
 const PHASES=[{id:'oct',name:'Octavos',date:'4–12 Mar 2026'},{id:'qtr',name:'Cuartos',date:'7–15 Abr 2026'},{id:'semi',name:'Semis',date:'28 Abr – 6 May 2026'},{id:'final',name:'Final',date:'30 May 2026 · Budapest'}];
-const MATCHES=[
-  {id:'psg-che',phase:'oct',home:'PSG',away:'Chelsea',hi:'psg',ai:'chelsea'},
-  {id:'gal-liv',phase:'oct',home:'Galatasaray',away:'Liverpool',hi:'galatasaray',ai:'liverpool'},
-  {id:'rma-mci',phase:'oct',home:'Real Madrid',away:'Man City',hi:'realmadrid',ai:'mancity'},
-  {id:'ata-bay',phase:'oct',home:'Atalanta',away:'Bayern Munich',hi:'atalanta',ai:'bayernmunich'},
-  {id:'new-bar',phase:'oct',home:'Newcastle',away:'Barcelona',hi:'newcastle',ai:'barcelona'},
-  {id:'atm-tot',phase:'oct',home:'Atlético Madrid',away:'Tottenham',hi:'atletico',ai:'tottenham'},
-  {id:'bod-spo',phase:'oct',home:'Bodø/Glimt',away:'Sporting CP',hi:'bodo',ai:'sporting'},
-  {id:'lev-ars',phase:'oct',home:'Bayer Leverkusen',away:'Arsenal',hi:'leverkusen',ai:'arsenal'},
-  {id:'q1',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'q2',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'q3',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'q4',phase:'qtr',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'s1',phase:'semi',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'s2',phase:'semi',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
-  {id:'f1',phase:'final',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true,oneleg:true}
-];
+// MATCHES se carga dinámicamente desde Firebase (matches_meta)
+let MATCHES=[];
 const CRESTS={
   psg:'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
   chelsea:'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
@@ -127,12 +112,43 @@ const CRESTS={
   ucl:'https://upload.wikimedia.org/wikipedia/en/f/f5/UEFA_Champions_League.svg'
 };
 let results={};let pron={};let activePhase='oct';let activeParticipant=PARTICIPANTS[0];
+// activePhase se actualiza dinámicamente cuando cargan los MATCHES
 function initResults(){const r={};MATCHES.forEach(m=>{r[m.id]={ida:{home:null,away:null},vuelta:m.oneleg?null:{home:null,away:null}};});return r;}
 function initPron(){const p={};PARTICIPANTS.forEach(n=>{p[n]={};MATCHES.forEach(m=>{p[n][m.id]={ida:{home:null,away:null},vuelta:{home:null,away:null}};});});return p;}
 function setFbStatus(s){const dot=document.getElementById('fb-dot'),lbl=document.getElementById('fb-label');dot.className='fb-dot';if(s==='ok'){dot.classList.add('ok');lbl.textContent='En línea';}else if(s==='sync'){dot.classList.add('sync');lbl.textContent='Guardando...';}else if(s==='err'){dot.classList.add('err');lbl.textContent='Sin conexión';}}
 async function saveResults(){setFbStatus('sync');try{await setDoc(doc(db,'betplay','results'),{data:JSON.stringify(results)});setFbStatus('ok');toast('✅ Resultado guardado en la nube');}catch(e){setFbStatus('err');toast('❌ Error: '+e.message);}}
 async function savePronFB(p){setFbStatus('sync');try{await setDoc(doc(db,'betplay','pron_'+p),{data:JSON.stringify(pron[p])});setFbStatus('ok');toast('✅ Pronósticos de '+p+' guardados');}catch(e){setFbStatus('err');toast('❌ Error: '+e.message);}}
-function subscribeAll(){onSnapshot(doc(db,'betplay','results'),(snap)=>{results=snap.exists()?JSON.parse(snap.data().data):initResults();refreshAll();setFbStatus('ok');},(e)=>setFbStatus('err'));PARTICIPANTS.forEach(p=>{onSnapshot(doc(db,'betplay','pron_'+p),(snap)=>{pron[p]=snap.exists()?JSON.parse(snap.data().data):initPron()[p];refreshAll();});});}
+function subscribeAll(){
+  // 1. Cargar matches_meta primero (fuente de verdad para los partidos)
+  onSnapshot(doc(db,'betplay','matches_meta'),(snap)=>{
+    if(snap.exists()){
+      MATCHES=JSON.parse(snap.data().data);
+      // Normalizar campos opcionales
+      MATCHES.forEach(m=>{
+        m.tbd=m.tbd||false;
+        m.oneleg=m.oneleg||false;
+      });
+    }
+    // Reinicializar resultados y pronósticos con los nuevos MATCHES
+    results=initResults();
+    pron=initPron();
+    // Actualizar activePhase a la primera fase disponible
+    if(MATCHES.length>0){
+      const phases=MATCHES.map(m=>m.phase);
+      const order=['oct','qtr','semi','final'];
+      activePhase=order.find(p=>phases.includes(p))||'oct';
+    }
+    refreshAll();
+    setFbStatus('ok');
+  },(e)=>setFbStatus('err'));
+  // 2. Escuchar resultados en tiempo real
+  onSnapshot(doc(db,'betplay','results'),(snap)=>{
+    results=snap.exists()?JSON.parse(snap.data().data):initResults();
+    refreshAll();setFbStatus('ok');
+  },(e)=>setFbStatus('err'));
+  // 3. Escuchar pronósticos de cada participante
+  PARTICIPANTS.forEach(p=>{onSnapshot(doc(db,'betplay','pron_'+p),(snap)=>{pron[p]=snap.exists()?JSON.parse(snap.data().data):initPron()[p];refreshAll();});});
+}
 function refreshAll(){renderRanking();renderBracket();renderMatches();renderPronTable();updateHero();}
 const fmt=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n);
 const winner=(h,a)=>h>a?'home':h<a?'away':'draw';
