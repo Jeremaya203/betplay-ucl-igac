@@ -106,14 +106,32 @@ const MATCHES=[
   {id:'s2',phase:'semi',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true},
   {id:'f1',phase:'final',home:'TBD',away:'TBD',hi:'ucl',ai:'ucl',tbd:true,oneleg:true}
 ];
-const CRESTS={psg:'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',newcastle:'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg',chelsea:'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',barcelona:'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',galatasaray:'https://upload.wikimedia.org/wikipedia/commons/4/44/Galatasaray_Sports_Club_Logo.svg',atletico:'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',liverpool:'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',tottenham:'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg',realmadrid:'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',bodo:'https://upload.wikimedia.org/wikipedia/commons/7/74/FK_Bod%C3%B8_Glimt_logo.svg',mancity:'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',sporting:'https://upload.wikimedia.org/wikipedia/en/f/f1/Sporting_CP_logo.svg',inter:'https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg',feyenoord:'https://upload.wikimedia.org/wikipedia/en/5/56/Feyenoord_Rotterdam.svg',arsenal:'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',juventus:'https://upload.wikimedia.org/wikipedia/commons/1/15/Juventus_FC_2017_logo.svg',ucl:'https://upload.wikimedia.org/wikipedia/en/f/f5/UEFA_Champions_League.svg'};
+const CRESTS={
+  psg:'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
+  chelsea:'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
+  galatasaray:'https://upload.wikimedia.org/wikipedia/commons/4/44/Galatasaray_Sports_Club_Logo.svg',
+  liverpool:'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
+  realmadrid:'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
+  mancity:'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
+  atalanta:'https://upload.wikimedia.org/wikipedia/commons/2/2f/Logo_Atalanta_Bergamo.svg',
+  bayernmunich:'https://upload.wikimedia.org/wikipedia/commons/b/b1/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg',
+  newcastle:'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg',
+  barcelona:'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
+  atletico:'https://upload.wikimedia.org/wikipedia/en/f/f4/Atletico_Madrid_2017_logo.svg',
+  tottenham:'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg',
+  bodo:'https://upload.wikimedia.org/wikipedia/commons/7/74/FK_Bod%C3%B8_Glimt_logo.svg',
+  sporting:'https://upload.wikimedia.org/wikipedia/en/f/f1/Sporting_CP_logo.svg',
+  leverkusen:'https://upload.wikimedia.org/wikipedia/en/5/59/Bayer_04_Leverkusen_logo.svg',
+  arsenal:'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
+  ucl:'https://upload.wikimedia.org/wikipedia/en/f/f5/UEFA_Champions_League.svg'
+};
 let results={};let pron={};let activePhase='oct';let activeParticipant=PARTICIPANTS[0];
 function initResults(){const r={};MATCHES.forEach(m=>{r[m.id]={ida:{home:null,away:null},vuelta:m.oneleg?null:{home:null,away:null}};});return r;}
 function initPron(){const p={};PARTICIPANTS.forEach(n=>{p[n]={};MATCHES.forEach(m=>{p[n][m.id]={ida:{home:null,away:null},vuelta:{home:null,away:null}};});});return p;}
 function setFbStatus(s){const dot=document.getElementById('fb-dot'),lbl=document.getElementById('fb-label');dot.className='fb-dot';if(s==='ok'){dot.classList.add('ok');lbl.textContent='En línea';}else if(s==='sync'){dot.classList.add('sync');lbl.textContent='Guardando...';}else if(s==='err'){dot.classList.add('err');lbl.textContent='Sin conexión';}}
 async function saveResults(){setFbStatus('sync');try{await setDoc(doc(db,'betplay','results'),{data:JSON.stringify(results)});setFbStatus('ok');toast('✅ Resultado guardado en la nube');}catch(e){setFbStatus('err');toast('❌ Error: '+e.message);}}
 async function savePronFB(p){setFbStatus('sync');try{await setDoc(doc(db,'betplay','pron_'+p),{data:JSON.stringify(pron[p])});setFbStatus('ok');toast('✅ Pronósticos de '+p+' guardados');}catch(e){setFbStatus('err');toast('❌ Error: '+e.message);}}
-
+function subscribeAll(){onSnapshot(doc(db,'betplay','results'),(snap)=>{results=snap.exists()?JSON.parse(snap.data().data):initResults();refreshAll();setFbStatus('ok');},(e)=>setFbStatus('err'));PARTICIPANTS.forEach(p=>{onSnapshot(doc(db,'betplay','pron_'+p),(snap)=>{pron[p]=snap.exists()?JSON.parse(snap.data().data):initPron()[p];refreshAll();});});}
 function refreshAll(){renderRanking();renderBracket();renderMatches();renderPronTable();updateHero();}
 const fmt=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n);
 const winner=(h,a)=>h>a?'home':h<a?'away':'draw';
@@ -136,10 +154,7 @@ function updateHero(){const max=Math.max(0,...PARTICIPANTS.map(p=>totalPts(p)));
 window.show=name=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));document.getElementById('view-'+name).classList.add('on');document.getElementById('n-'+name).classList.add('on');if(name==='ranking'){renderRanking();updateHero();}if(name==='bracket')renderBracket();if(name==='resultados'){renderPhaseSelector();renderMatches();}if(name==='pronosticos'){renderPtabs();renderPronTable();}};
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 (()=>{const btn=document.getElementById('tbtn');let dark=true;btn.addEventListener('click',()=>{dark=!dark;document.documentElement.setAttribute('data-theme',dark?'dark':'light');btn.innerHTML=dark?'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>':'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';});})();
-let _loaderHidden=false;
-function hideLoader(){if(_loaderHidden)return;_loaderHidden=true;document.getElementById('fb-loading').classList.add('hidden');renderRanking();renderBracket();updateHero();renderPhaseSelector();}
-function subscribeAll(){onSnapshot(doc(db,'betplay','results'),(snap)=>{results=snap.exists()?JSON.parse(snap.data().data):initResults();refreshAll();setFbStatus('ok');hideLoader();},(e)=>{setFbStatus('err');hideLoader();});PARTICIPANTS.forEach(p=>{onSnapshot(doc(db,'betplay','pron_'+p),(snap)=>{pron[p]=snap.exists()?JSON.parse(snap.data().data):initPron()[p];refreshAll();});});}
-async function init(){results=initResults();pron=initPron();document.getElementById('fb-loading-msg').textContent='Cargando datos...';setTimeout(hideLoader,5000);try{subscribeAll();}catch(e){document.getElementById('fb-loading-msg').textContent='Error: '+e.message;setFbStatus('err');hideLoader();}}
+async function init(){results=initResults();pron=initPron();document.getElementById('fb-loading-msg').textContent='Cargando datos...';try{subscribeAll();setTimeout(()=>{document.getElementById('fb-loading').classList.add('hidden');renderRanking();renderBracket();updateHero();renderPhaseSelector();},2200);}catch(e){document.getElementById('fb-loading-msg').textContent='Error: '+e.message;setFbStatus('err');setTimeout(()=>document.getElementById('fb-loading').classList.add('hidden'),3000);}}
 init();
 </script>
 </body>
