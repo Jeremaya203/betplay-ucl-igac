@@ -8,10 +8,10 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
-import json, re
+import json, re, os
 
 # ── CONFIG ───────────────────────────────────────────────────────────────────
-API_KEY          = "79b8030c17c949618a2ca60e3840ca77"   # <-- tu key de football-data.org
+API_KEY          = os.environ.get("FOOTBALL_API_KEY", "79b8030c17c949618a2ca60e3840ca77")
 SEASON           = 2025
 UCL_ID           = 2001
 SERVICE_ACCOUNT  = "serviceAccountKey.json"
