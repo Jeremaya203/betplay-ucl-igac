@@ -216,6 +216,8 @@ def main():
                 "id": f"{ph}{i+1}", "phase": ph,
                 "home": "TBD", "away": "TBD",
                 "hi": "ucl", "ai": "ucl",
+                "hi_url": "https://crests.football-data.org/CL.png",
+                "ai_url": "https://crests.football-data.org/CL.png",
                 "oneleg": ph == "final", "tbd": True,
             })
 
