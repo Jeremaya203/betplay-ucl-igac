@@ -141,9 +141,6 @@ function subscribeAll(){
         m.oneleg=m.oneleg||false;
       });
     }
-    // Reinicializar resultados y pronósticos con los nuevos MATCHES
-    results=initResults();
-    pron=initPron();
     // Actualizar activePhase a la primera fase disponible
     if(MATCHES.length>0){
       const phases=MATCHES.map(m=>m.phase);
