@@ -46,13 +46,24 @@
 .vsplash-skip.hidden{display:none;}
 .vsplash-countdown{position:absolute;bottom:2rem;right:2rem;padding:.45rem 1.1rem;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:9999px;color:rgba(255,255,255,.45);font-family:'Inter',system-ui,sans-serif;font-size:.8rem;backdrop-filter:blur(4px);pointer-events:none;}
 .vsplash.hidden{display:none;}
+/* click-to-enter gate */
+.vsplash-gate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;background:rgba(0,0,0,.72);cursor:pointer;z-index:2;}
+.vsplash-gate.hidden{display:none;}
+.vsplash-gate-logo{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(2rem,8vw,4rem);letter-spacing:.1em;color:#f0c040;text-shadow:0 0 40px rgba(240,192,64,.6);}
+.vsplash-gate-btn{display:flex;align-items:center;gap:.75rem;padding:.8rem 2.2rem;border-radius:9999px;border:2px solid rgba(240,192,64,.7);background:rgba(240,192,64,.12);color:#f0c040;font-family:'Inter',system-ui,sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.08em;backdrop-filter:blur(8px);transition:background .2s,box-shadow .2s;animation:glow-pulse 2s ease-in-out infinite;}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 16px rgba(240,192,64,.3);}50%{box-shadow:0 0 40px rgba(240,192,64,.7);}}
 @media(max-width:600px){.hdr,.nav{padding-left:var(--sp4);padding-right:var(--sp4)}.view{padding:var(--sp5) var(--sp4)}.hero{padding:var(--sp5)}.b-round{min-width:170px}}
 </style>
 </head>
 <body>
 <!-- Video splash intro -->
 <div class="vsplash" id="vsplash">
-  <video id="vsplash-video" playsinline autoplay muted>
+  <!-- Gate: click para entrar (requerido por navegadores para autoplay con audio) -->
+  <div class="vsplash-gate" id="vsplash-gate">
+    <div class="vsplash-gate-logo">BETPLAY IGAC</div>
+    <div class="vsplash-gate-btn">&#9654;&nbsp; Entrar</div>
+  </div>
+  <video id="vsplash-video" playsinline preload="auto">
     <source src="APERTURA.mp4" type="video/mp4">
   </video>
   <button class="vsplash-skip hidden" id="vsplash-skip">Omitir &#9654;</button>
@@ -199,6 +210,7 @@ async function init(){results=initResults();pron=initPron();document.getElementB
 // ── Video splash logic ──
 (()=>{
   const splash=document.getElementById('vsplash');
+  const gate=document.getElementById('vsplash-gate');
   const video=document.getElementById('vsplash-video');
   const skipBtn=document.getElementById('vsplash-skip');
   const countdown=document.getElementById('vsplash-countdown');
@@ -211,36 +223,39 @@ async function init(){results=initResults();pron=initPron();document.getElementB
     localStorage.setItem(SEEN_KEY,'1');
     init();
   }
-  if(seen){
-    // Visita de regreso: mostrar botón de omitir desde el principio
-    skipBtn.classList.remove('hidden');
-    countdown.style.display='none';
-  }else{
-    // Primera visita: mostrar cuenta regresiva, sin omitir
-    let remaining=Math.ceil(video.duration)||null;
-    function updateCountdown(){
-      const dur=video.duration;
-      const cur=video.currentTime;
-      if(!isFinite(dur)){countdown.textContent='';return;}
-      const left=Math.ceil(dur-cur);
-      countdown.textContent=left>0?left+'s':'';
-    }
-    video.addEventListener('timeupdate',updateCountdown);
-    video.addEventListener('loadedmetadata',updateCountdown);
-  }
-  skipBtn.addEventListener('click',closeSplash);
-  video.addEventListener('ended',closeSplash);
-  // Fallback: si el video no carga en 8s, mostrar botón de omitir
-  setTimeout(()=>{
-    if(!splash.classList.contains('hidden')){
+  function startVideo(){
+    gate.classList.add('hidden');
+    video.play();
+    if(seen){
       skipBtn.classList.remove('hidden');
       countdown.style.display='none';
+    }else{
+      function updateCountdown(){
+        const dur=video.duration;
+        const cur=video.currentTime;
+        if(!isFinite(dur)){countdown.textContent='';return;}
+        const left=Math.ceil(dur-cur);
+        countdown.textContent=left>0?left+'s':'';
+      }
+      video.addEventListener('timeupdate',updateCountdown);
+      video.addEventListener('loadedmetadata',updateCountdown);
+      // Fallback: si tarda más de 8s en terminar de aparecer la cuenta, mostrar skip
+      setTimeout(()=>{
+        if(!splash.classList.contains('hidden')&&skipBtn.classList.contains('hidden')){
+          skipBtn.classList.remove('hidden');
+          countdown.style.display='none';
+        }
+      },120000); // 2min máximo sin skip en primera visita
     }
-  },8000);
-  // Iniciar reproducción (browsers bloquean autoplay con sonido, el video está en mute)
-  video.play().catch(()=>{
+  }
+  gate.addEventListener('click',startVideo);
+  skipBtn.addEventListener('click',closeSplash);
+  video.addEventListener('ended',closeSplash);
+  // Fallback si el video falla al cargar
+  video.addEventListener('error',()=>{
     skipBtn.classList.remove('hidden');
     countdown.style.display='none';
+    gate.classList.add('hidden');
   });
 })();
 </script>
