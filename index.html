@@ -38,11 +38,27 @@
 .sec-t{font-family:var(--fd);font-size:var(--text-lg);letter-spacing:.05em;margin-bottom:var(--sp6);display:flex;align-items:center;gap:var(--sp3)}.sec-t::after{content:'';flex:1;height:1px;background:var(--bd)}
 .toast{position:fixed;bottom:var(--sp8);left:50%;transform:translateX(-50%);background:var(--sf);border:1px solid var(--bdb);border-radius:var(--r-full);padding:var(--sp3) var(--sp6);font-size:var(--text-sm);font-weight:600;box-shadow:var(--sh);z-index:999;opacity:0;pointer-events:none;transition:opacity .3s}.toast.show{opacity:1}
 .fb-loading{position:fixed;inset:0;background:rgba(9,11,19,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp4);z-index:9999;backdrop-filter:blur(8px)}.fb-loading.hidden{display:none}.fb-spinner{width:48px;height:48px;border:3px solid var(--sf3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}.fb-loading-t{font-family:var(--fd);font-size:1.4rem;letter-spacing:.06em;color:var(--gold)}.fb-loading-s{font-size:var(--text-sm);color:var(--txm)}
+/* ── Video splash ── */
+.vsplash{position:fixed;inset:0;background:#000;z-index:99999;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.vsplash video{width:100%;height:100%;object-fit:contain;max-height:100dvh;}
+.vsplash-skip{position:absolute;bottom:2rem;right:2rem;padding:.55rem 1.4rem;background:rgba(240,192,64,.18);border:1px solid rgba(240,192,64,.5);border-radius:9999px;color:#f0c040;font-family:'Inter',system-ui,sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.06em;cursor:pointer;backdrop-filter:blur(6px);transition:background .2s,box-shadow .2s;}
+.vsplash-skip:hover{background:rgba(240,192,64,.35);box-shadow:0 0 18px rgba(240,192,64,.4);}
+.vsplash-skip.hidden{display:none;}
+.vsplash-countdown{position:absolute;bottom:2rem;right:2rem;padding:.45rem 1.1rem;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:9999px;color:rgba(255,255,255,.45);font-family:'Inter',system-ui,sans-serif;font-size:.8rem;backdrop-filter:blur(4px);pointer-events:none;}
+.vsplash.hidden{display:none;}
 @media(max-width:600px){.hdr,.nav{padding-left:var(--sp4);padding-right:var(--sp4)}.view{padding:var(--sp5) var(--sp4)}.hero{padding:var(--sp5)}.b-round{min-width:170px}}
 </style>
 </head>
 <body>
-<div class="fb-loading" id="fb-loading">
+<!-- Video splash intro -->
+<div class="vsplash" id="vsplash">
+  <video id="vsplash-video" playsinline autoplay muted>
+    <source src="APERTURA.mp4" type="video/mp4">
+  </video>
+  <button class="vsplash-skip hidden" id="vsplash-skip">Omitir &#9654;</button>
+  <div class="vsplash-countdown" id="vsplash-countdown"></div>
+</div>
+<div class="fb-loading hidden" id="fb-loading">
   <div class="fb-spinner"></div>
   <div class="fb-loading-t">BETPLAY IGAC</div>
   <div class="fb-loading-s" id="fb-loading-msg">Conectando con Firebase...</div>
@@ -180,7 +196,53 @@ window.show=name=>{document.querySelectorAll('.view').forEach(v=>v.classList.rem
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 (()=>{const btn=document.getElementById('tbtn');let dark=true;btn.addEventListener('click',()=>{dark=!dark;document.documentElement.setAttribute('data-theme',dark?'dark':'light');btn.innerHTML=dark?'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>':'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';});})();
 async function init(){results=initResults();pron=initPron();document.getElementById('fb-loading-msg').textContent='Cargando datos...';try{subscribeAll();setTimeout(()=>{document.getElementById('fb-loading').classList.add('hidden');renderRanking();renderBracket();updateHero();renderPhaseSelector();},2200);}catch(e){document.getElementById('fb-loading-msg').textContent='Error: '+e.message;setFbStatus('err');setTimeout(()=>document.getElementById('fb-loading').classList.add('hidden'),3000);}}
-init();
+// ── Video splash logic ──
+(()=>{
+  const splash=document.getElementById('vsplash');
+  const video=document.getElementById('vsplash-video');
+  const skipBtn=document.getElementById('vsplash-skip');
+  const countdown=document.getElementById('vsplash-countdown');
+  const SEEN_KEY='betplay_seen_apertura';
+  const seen=localStorage.getItem(SEEN_KEY);
+  function closeSplash(){
+    video.pause();
+    splash.classList.add('hidden');
+    document.getElementById('fb-loading').classList.remove('hidden');
+    localStorage.setItem(SEEN_KEY,'1');
+    init();
+  }
+  if(seen){
+    // Visita de regreso: mostrar botón de omitir desde el principio
+    skipBtn.classList.remove('hidden');
+    countdown.style.display='none';
+  }else{
+    // Primera visita: mostrar cuenta regresiva, sin omitir
+    let remaining=Math.ceil(video.duration)||null;
+    function updateCountdown(){
+      const dur=video.duration;
+      const cur=video.currentTime;
+      if(!isFinite(dur)){countdown.textContent='';return;}
+      const left=Math.ceil(dur-cur);
+      countdown.textContent=left>0?left+'s':'';
+    }
+    video.addEventListener('timeupdate',updateCountdown);
+    video.addEventListener('loadedmetadata',updateCountdown);
+  }
+  skipBtn.addEventListener('click',closeSplash);
+  video.addEventListener('ended',closeSplash);
+  // Fallback: si el video no carga en 8s, mostrar botón de omitir
+  setTimeout(()=>{
+    if(!splash.classList.contains('hidden')){
+      skipBtn.classList.remove('hidden');
+      countdown.style.display='none';
+    }
+  },8000);
+  // Iniciar reproducción (browsers bloquean autoplay con sonido, el video está en mute)
+  video.play().catch(()=>{
+    skipBtn.classList.remove('hidden');
+    countdown.style.display='none';
+  });
+})();
 </script>
 </body>
 </html>
